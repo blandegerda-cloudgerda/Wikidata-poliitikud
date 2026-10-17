@@ -156,13 +156,12 @@
     }
 
     function keeleSeaded() {
-      return `
-        SERVICE wikibase:label {
-          bd:serviceParam wikibase:language "et,en".
-        }
-      `;
+  return `
+    SERVICE wikibase:label {
+      bd:serviceParam wikibase:language "es,en,et, mul".
     }
-
+  `;
+}
     async function otsiPoliitikuid() {
       const riik = document.getElementById("riik").value;
       const sugu = document.getElementById("sugu").value;
