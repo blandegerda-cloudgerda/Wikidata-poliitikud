@@ -156,9 +156,12 @@
     }
 
     function keeleSeaded() {
+  const riik = document.getElementById("riik").value;
+  const keeled = riik === "Q29" ? "es,en,et" : "et,en,es";
+
   return `
     SERVICE wikibase:label {
-      bd:serviceParam wikibase:language "es,en,et, mul".
+      bd:serviceParam wikibase:language "${keeled}".
     }
   `;
 }
