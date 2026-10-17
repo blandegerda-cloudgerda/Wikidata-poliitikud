@@ -84,29 +84,22 @@
 <body>
   <h1>Poliitikud Wikidatast</h1>
 
-  <p>
-    Sellel veebilehel saab otsida eri riikide poliitikuid
-    ning uurida nende soo järgi jagunemist Wikidata andmete põhjal.
-  </p>
-
   <section>
-    <h2>1. Poliitikute otsing</h2>
+    <h2>Poliitikute otsing</h2>
 
-    <label for="riik">Vali riik:</label>
+    <label for="riik">Riik:</label>
     <select id="riik">
       <option value="Q191">Eesti</option>
       <option value="Q29">Hispaania</option>
-      <option value="Q33">Soome</option>
     </select>
 
-    <label for="sugu">Vali sugu:</label>
+    <label for="sugu">Sugu:</label>
     <select id="sugu">
-      <option value="koik">Kõik</option>
       <option value="Q6581072">Naine</option>
       <option value="Q6581097">Mees</option>
     </select>
 
-    <button id="otsi">Otsi Wikidatast</button>
+    <button id="otsi">Otsi</button>
 
     <p id="staatus" aria-live="polite">Laadin andmeid...</p>
 
@@ -115,7 +108,7 @@
         <thead>
           <tr>
             <th>Poliitiku nimi</th>
-            <th>Wikidata kirje</th>
+            <th>Wikidata</th>
           </tr>
         </thead>
         <tbody id="tulemused"></tbody>
@@ -124,11 +117,7 @@
   </section>
 
   <section>
-    <h2>2. Poliitikute statistika soo järgi</h2>
-    <p>
-      Tabel näitab, mitu poliitikut on valitud riigi kohta
-      Wikidatas eri soo kategooriatesse märgitud.
-    </p>
+    <h2>Poliitikute statistika soo järgi</h2>
 
     <div class="tabel">
       <table>
@@ -141,20 +130,6 @@
         <tbody id="statistika"></tbody>
       </table>
     </div>
-  </section>
-
-  <section>
-    <h2>Tulemuste kommentaar</h2>
-    <p>
-      Esimene päring otsib valitud riigi poliitikuid ning võimaldab
-      tulemusi soo järgi filtreerida. Teine päring rühmitab poliitikud
-      soo järgi ja loendab iga rühma liikmed.
-    </p>
-    <p>
-      Tulemused sõltuvad Wikidatasse sisestatud andmetest.
-      Kõigi poliitikute kohta ei pruugi olla täielikke andmeid,
-      mistõttu ei pruugi päringu tulemused hõlmata kõiki poliitikuid.
-    </p>
   </section>
 
   <script>
@@ -197,16 +172,12 @@
       keha.replaceChildren();
       staatus.textContent = "Otsin Wikidatast...";
 
-      const sootingimus = sugu === "koik"
-        ? ""
-        : `?isik wdt:P21 wd:${sugu}.`;
-
       const sonaparing = `
         SELECT DISTINCT ?isik ?isikLabel
         WHERE {
           ?isik wdt:P27 wd:${riik}.
           ?isik wdt:P106 wd:Q82955.
-          ${sootingimus}
+          ?isik wdt:P21 wd:${sugu}.
           ${keeleSeaded()}
         }
         ORDER BY ?isikLabel
@@ -224,7 +195,7 @@
 
           nimi.textContent = rida.isikLabel.value;
           link.href = rida.isik.value;
-          link.textContent = "Ava Wikidatas";
+          link.textContent = "Ava";
           link.target = "_blank";
           link.rel = "noopener noreferrer";
 
@@ -234,12 +205,12 @@
         }
 
         staatus.textContent = read.length
-          ? `Leiti ${read.length} tulemust (kuvatakse kuni 100).`
-          : "Selle valikuga poliitikuid ei leitud.";
+          ? `Leiti ${read.length} tulemust.`
+          : "Tulemusi ei leitud.";
 
       } catch (viga) {
         staatus.textContent =
-          "Andmete laadimine ebaõnnestus. Proovi mõne aja pärast uuesti.";
+          "Andmete laadimine ebaõnnestus. Proovi uuesti hiljem.";
         console.error(viga);
       }
     }
@@ -257,6 +228,10 @@
           ?isik wdt:P27 wd:${riik}.
           ?isik wdt:P106 wd:Q82955.
           ?isik wdt:P21 ?sugu.
+          VALUES ?sugu {
+            wd:Q6581072
+            wd:Q6581097
+          }
           ${keeleSeaded()}
         }
         GROUP BY ?sugu ?suguLabel
@@ -303,4 +278,5 @@
   </script>
 </body>
 </html>
+
 
