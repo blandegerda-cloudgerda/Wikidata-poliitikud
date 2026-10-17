@@ -1,1 +1,306 @@
 
+<!DOCTYPE html>
+<html lang="et">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Poliitikud Wikidatast</title>
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 950px;
+      margin: 30px auto;
+      padding: 0 18px;
+      background: #f3f6f9;
+      color: #263238;
+    }
+
+    h1, h2 {
+      color: #24476b;
+    }
+
+    section {
+      background: white;
+      padding: 20px;
+      margin: 20px 0;
+      border-radius: 10px;
+    }
+
+    label {
+      display: block;
+      margin-top: 15px;
+      font-weight: bold;
+    }
+
+    select, button {
+      box-sizing: border-box;
+      width: 100%;
+      padding: 11px;
+      margin-top: 6px;
+      font-size: 16px;
+    }
+
+    button {
+      background: #24476b;
+      color: white;
+      border: 0;
+      border-radius: 5px;
+      cursor: pointer;
+      margin-top: 20px;
+    }
+
+    button:hover {
+      background: #376b9e;
+    }
+
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      margin-top: 15px;
+      background: white;
+    }
+
+    th, td {
+      border: 1px solid #ddd;
+      padding: 10px;
+      text-align: left;
+    }
+
+    th {
+      background: #e7eef5;
+    }
+
+    a {
+      color: #245d91;
+    }
+
+    .tabel {
+      overflow-x: auto;
+    }
+  </style>
+</head>
+
+<body>
+  <h1>Poliitikud Wikidatast</h1>
+
+  <p>
+    Sellel veebilehel saab otsida eri riikide poliitikuid
+    ning uurida nende soo järgi jagunemist Wikidata andmete põhjal.
+  </p>
+
+  <section>
+    <h2>1. Poliitikute otsing</h2>
+
+    <label for="riik">Vali riik:</label>
+    <select id="riik">
+      <option value="Q191">Eesti</option>
+      <option value="Q29">Hispaania</option>
+      <option value="Q33">Soome</option>
+    </select>
+
+    <label for="sugu">Vali sugu:</label>
+    <select id="sugu">
+      <option value="koik">Kõik</option>
+      <option value="Q6581072">Naine</option>
+      <option value="Q6581097">Mees</option>
+    </select>
+
+    <button id="otsi">Otsi Wikidatast</button>
+
+    <p id="staatus" aria-live="polite">Laadin andmeid...</p>
+
+    <div class="tabel">
+      <table>
+        <thead>
+          <tr>
+            <th>Poliitiku nimi</th>
+            <th>Wikidata kirje</th>
+          </tr>
+        </thead>
+        <tbody id="tulemused"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <h2>2. Poliitikute statistika soo järgi</h2>
+    <p>
+      Tabel näitab, mitu poliitikut on valitud riigi kohta
+      Wikidatas eri soo kategooriatesse märgitud.
+    </p>
+
+    <div class="tabel">
+      <table>
+        <thead>
+          <tr>
+            <th>Sugu</th>
+            <th>Poliitikute arv</th>
+          </tr>
+        </thead>
+        <tbody id="statistika"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <h2>Tulemuste kommentaar</h2>
+    <p>
+      Esimene päring otsib valitud riigi poliitikuid ning võimaldab
+      tulemusi soo järgi filtreerida. Teine päring rühmitab poliitikud
+      soo järgi ja loendab iga rühma liikmed.
+    </p>
+    <p>
+      Tulemused sõltuvad Wikidatasse sisestatud andmetest.
+      Kõigi poliitikute kohta ei pruugi olla täielikke andmeid,
+      mistõttu ei pruugi päringu tulemused hõlmata kõiki poliitikuid.
+    </p>
+  </section>
+
+  <script>
+    const PARGINGU_URL = "https://query.wikidata.org/sparql";
+
+    async function saadaAndmed(sonaparing) {
+      const aadress = PARGINGU_URL + "?" + new URLSearchParams({
+        query: sonaparing,
+        format: "json"
+      });
+
+      const vastus = await fetch(aadress, {
+        headers: {
+          Accept: "application/sparql-results+json"
+        }
+      });
+
+      if (!vastus.ok) {
+        throw new Error("Wikidata päring ebaõnnestus.");
+      }
+
+      const andmed = await vastus.json();
+      return andmed.results.bindings;
+    }
+
+    function keeleSeaded() {
+      return `
+        SERVICE wikibase:label {
+          bd:serviceParam wikibase:language "et,en".
+        }
+      `;
+    }
+
+    async function otsiPoliitikuid() {
+      const riik = document.getElementById("riik").value;
+      const sugu = document.getElementById("sugu").value;
+      const staatus = document.getElementById("staatus");
+      const keha = document.getElementById("tulemused");
+
+      keha.replaceChildren();
+      staatus.textContent = "Otsin Wikidatast...";
+
+      const sootingimus = sugu === "koik"
+        ? ""
+        : `?isik wdt:P21 wd:${sugu}.`;
+
+      const sonaparing = `
+        SELECT DISTINCT ?isik ?isikLabel
+        WHERE {
+          ?isik wdt:P27 wd:${riik}.
+          ?isik wdt:P106 wd:Q82955.
+          ${sootingimus}
+          ${keeleSeaded()}
+        }
+        ORDER BY ?isikLabel
+        LIMIT 100
+      `;
+
+      try {
+        const read = await saadaAndmed(sonaparing);
+
+        for (const rida of read) {
+          const tr = document.createElement("tr");
+          const nimi = document.createElement("td");
+          const viide = document.createElement("td");
+          const link = document.createElement("a");
+
+          nimi.textContent = rida.isikLabel.value;
+          link.href = rida.isik.value;
+          link.textContent = "Ava Wikidatas";
+          link.target = "_blank";
+          link.rel = "noopener noreferrer";
+
+          viide.appendChild(link);
+          tr.append(nimi, viide);
+          keha.appendChild(tr);
+        }
+
+        staatus.textContent = read.length
+          ? `Leiti ${read.length} tulemust (kuvatakse kuni 100).`
+          : "Selle valikuga poliitikuid ei leitud.";
+
+      } catch (viga) {
+        staatus.textContent =
+          "Andmete laadimine ebaõnnestus. Proovi mõne aja pärast uuesti.";
+        console.error(viga);
+      }
+    }
+
+    async function laadiStatistika() {
+      const riik = document.getElementById("riik").value;
+      const keha = document.getElementById("statistika");
+
+      keha.replaceChildren();
+
+      const sonaparing = `
+        SELECT ?sugu ?suguLabel
+               (COUNT(DISTINCT ?isik) AS ?kogus)
+        WHERE {
+          ?isik wdt:P27 wd:${riik}.
+          ?isik wdt:P106 wd:Q82955.
+          ?isik wdt:P21 ?sugu.
+          ${keeleSeaded()}
+        }
+        GROUP BY ?sugu ?suguLabel
+        ORDER BY DESC(?kogus)
+      `;
+
+      try {
+        const read = await saadaAndmed(sonaparing);
+
+        for (const rida of read) {
+          const tr = document.createElement("tr");
+          const sugu = document.createElement("td");
+          const arv = document.createElement("td");
+
+          sugu.textContent = rida.suguLabel.value;
+          arv.textContent = rida.kogus.value;
+
+          tr.append(sugu, arv);
+          keha.appendChild(tr);
+        }
+
+        if (read.length === 0) {
+          keha.innerHTML =
+            "<tr><td colspan='2'>Andmeid ei leitud.</td></tr>";
+        }
+      } catch (viga) {
+        keha.innerHTML =
+          "<tr><td colspan='2'>Statistika laadimine ebaõnnestus.</td></tr>";
+        console.error(viga);
+      }
+    }
+
+    async function uuendaLehte() {
+      await Promise.all([
+        otsiPoliitikuid(),
+        laadiStatistika()
+      ]);
+    }
+
+    document.getElementById("otsi")
+      .addEventListener("click", uuendaLehte);
+
+    uuendaLehte();
+  </script>
+</body>
+</html>
+
